@@ -9,30 +9,25 @@ public class PersistEmployee {
     static final String USER = "postgres";
     static final String PASSWORD = "postgres";
 
-    public static void persist(Connection connection, Employee employee) throws SQLException {
+    public static void persist(Connection connection, Employee employee)  {
         //Prepare the insert statement string using the Employee instance variable values
         String insertStatement = String.format("INSERT INTO employee (id, email, office, salary) VALUES (%d, \'%s\', \'%s\', %.2f)",
                                  employee.getId(), employee.getEmail(), employee.getOffice(), employee.getSalary());
         System.out.println(insertStatement);
 
-        //Execute the insert statement
-        Statement statement = connection.createStatement();
-        statement.executeUpdate(insertStatement);
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate(insertStatement);
+        }
+        catch (SQLException e) { System.out.println(e.getMessage()); }
     }
 
     public static void main(String[] args)  {
-        try {
-            Connection connection =  DriverManager.getConnection(DB_URL, USER, PASSWORD);
-
+        try (Connection connection =  DriverManager.getConnection(DB_URL, USER, PASSWORD)) {
             //Create a new Employee object
             Employee employee = new Employee(100, "emp100@company.com", "a456", 99000.0);
 
             //Save the object to the database
             persist(connection, employee);
-
-            connection.close();
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
+        } catch (SQLException e) { System.out.println(e.getMessage()); }
     }
 }

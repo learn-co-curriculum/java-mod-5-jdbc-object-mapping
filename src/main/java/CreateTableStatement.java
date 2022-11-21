@@ -10,24 +10,19 @@ public class CreateTableStatement {
     static final String PASSWORD = "postgres";
 
     public static void main(String[] args) {
-        try {
-            //Establish a connection to the database
-            Connection connection = DriverManager.getConnection(DB_URL, USER, PASSWORD);
-
-            //Create a statement object to execute SQL statements on the database
-            Statement statement = connection.createStatement();
-
+        try (
+                //Establish a connection to the database
+                Connection connection = DriverManager.getConnection(DB_URL, USER, PASSWORD);
+                //Create a statement object to execute SQL statements on the database
+                Statement statement = connection.createStatement();
+        ) {
             //Drop the employee table if it exists
             statement.execute("DROP TABLE IF EXISTS employee");
 
             //Create the employee table
             statement.execute("CREATE TABLE employee (id INTEGER PRIMARY KEY, email TEXT, office TEXT, salary DECIMAL)");
             System.out.println("Employee table created");
-
-            connection.close();
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
+        } catch (SQLException e) { System.out.println(e.getMessage()); }
 
     }
 }

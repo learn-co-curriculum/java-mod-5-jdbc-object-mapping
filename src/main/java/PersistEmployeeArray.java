@@ -9,30 +9,33 @@ public class PersistEmployeeArray {
     static final String USER = "postgres";
     static final String PASSWORD = "postgres";
 
-    public static void persist(Connection connection, Employee[] employees) throws SQLException {
+    public static void persist(Connection connection, Employee[] employees)  {
         //Create an insert statement with placeholder ? for each column value
         String insertStatement = "INSERT INTO employee (id, email, office, salary) VALUES (?,?,?,?)";
 
+        try (
         //Create a PreparedStatement object for sending parameterized SQL statements through the database connection.
-        PreparedStatement preparedStmt = connection.prepareStatement(insertStatement);
+        PreparedStatement preparedStmt = connection.prepareStatement(insertStatement)
+        ) {
 
-        //Loop through employee array to insert one row for each object
-        for (Employee e : employees) {
-            // Assign prepared statement placeholders ? to employee object's fields
-            preparedStmt.setInt(1, e.getId());   //first ?
-            preparedStmt.setString(2, e.getEmail());  //second ?
-            preparedStmt.setString(3, e.getOffice());  //third ?
-            preparedStmt.setDouble(4, e.getSalary()); //fourth ?
-            System.out.println(preparedStmt);
+            //Loop through employee array to insert one row for each object
+            for (Employee e : employees) {
+                // Assign prepared statement placeholders ? to employee object's fields
+                preparedStmt.setInt(1, e.getId());   //first ?
+                preparedStmt.setString(2, e.getEmail());  //second ?
+                preparedStmt.setString(3, e.getOffice());  //third ?
+                preparedStmt.setDouble(4, e.getSalary()); //fourth ?
+                System.out.println(preparedStmt);
 
-            //Execute the insert statement.
-            preparedStmt.executeUpdate();
-        }
+                //Execute the insert statement.
+                preparedStmt.executeUpdate();
+            }
+        } catch (SQLException e) { System.out.println(e.getMessage());  }
+
     }
 
     public static void main(String[] args)  {
-        try {
-            Connection connection = DriverManager.getConnection(DB_URL, USER, PASSWORD);
+        try (Connection connection = DriverManager.getConnection(DB_URL, USER, PASSWORD)) {
 
             //Create array of employees to save to the database
             Employee[] employees =  {
@@ -44,9 +47,6 @@ public class PersistEmployeeArray {
             //Save each employee in the array to the database
             persist(connection, employees);
 
-        connection.close();
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
+        } catch (SQLException e) { System.out.println(e.getMessage()); }
     }
 }

@@ -82,39 +82,34 @@ statement using the instance variable values of the `Employee` object passed as 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 public class PersistEmployee {
 
-    static final String DB_URL = "jdbc:postgresql://localhost:5432/employee_db";
-    static final String USER = "postgres";
-    static final String PASSWORD = "postgres";
+  static final String DB_URL = "jdbc:postgresql://localhost:5432/employee_db";
+  static final String USER = "postgres";
+  static final String PASSWORD = "postgres";
 
-    public static void persist(Connection connection, Employee employee) throws SQLException {
-        //Prepare the insert statement string using the Employee instance variable values
-        String insertStatement = String.format("INSERT INTO employee (id, email, office, salary) VALUES (%d, \'%s\', \'%s\', %.2f)",
-                                               employee.getId(), employee.getEmail(), employee.getOffice(), employee.getSalary());
-        System.out.println(insertStatement);
+  public static void persist(Connection connection, Employee employee)  {
+    //Prepare the insert statement string using the Employee instance variable values
+    String insertStatement = String.format("INSERT INTO employee (id, email, office, salary) VALUES (%d, \'%s\', \'%s\', %.2f)",
+            employee.getId(), employee.getEmail(), employee.getOffice(), employee.getSalary());
+    System.out.println(insertStatement);
 
-        //Execute the insert statement
-        Statement statement = connection.createStatement();
-        statement.executeUpdate(insertStatement);
-    }
+    try (Statement statement = connection.createStatement()) {
+      statement.executeUpdate(insertStatement);
+    } catch (SQLException e) { System.out.println(e.getMessage()); }
+  }
 
-    public static void main(String[] args)  {
-        try {
-            Connection connection =  DriverManager.getConnection(DB_URL, USER, PASSWORD);
+  public static void main(String[] args)  {
+    try (Connection connection =  DriverManager.getConnection(DB_URL, USER, PASSWORD)) {
+      //Create a new Employee object
+      Employee employee = new Employee(100, "emp100@company.com", "a456", 99000.0);
 
-            //Create a new Employee object
-            Employee employee = new Employee(100, "emp100@company.com", "a456", 99000.0);
-            
-            //Save the object to the database
-            persist(connection, employee);
-
-            connection.close();
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
+      //Save the object to the database
+      persist(connection, employee);
+    } catch (SQLException e) { System.out.println(e.getMessage()); }
+  }
 }
 ```
 
@@ -140,63 +135,55 @@ an `Employee` class instance:
 
 ```java
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.DriverManager;
 
 public class FindEmployee {
 
-    static final String DB_URL = "jdbc:postgresql://localhost:5432/employee_db";
-    static final String USER = "postgres";
-    static final String PASSWORD = "postgres";
+  static final String DB_URL = "jdbc:postgresql://localhost:5432/employee_db";
+  static final String USER = "postgres";
+  static final String PASSWORD = "postgres";
 
-    public static Employee find(Connection connection, int id)  {
-        try {
-            String selectStatement = "SELECT * FROM employee WHERE id = " + id;
-            System.out.println(selectStatement);
-            
-            //Execute the select statement
-            Statement statement = connection.createStatement();
-            ResultSet rs = statement.executeQuery(selectStatement);
-            
-            //Proceed to the first row in the result set
-            if (rs.next()) {
-                //Create an instance of class Employee using the row data
-                Employee employee = new Employee(rs.getInt("id"), rs.getString("email"), rs.getString("office"), rs.getDouble("salary"));;
+  public static Employee find(Connection connection, int id)  {
+    String selectStatement = "SELECT * FROM employee WHERE id = " + id;
+    System.out.println(selectStatement);
 
-                //Close the result set
-                rs.close();
+    try (Statement statement = connection.createStatement()) {
+      //Execute the select statement
+      try (ResultSet rs = statement.executeQuery(selectStatement)) {
 
-                //Return the employee object
-                return employee;
-            }
+        //Proceed to the first row in the result set
+        if (rs.next()) {
+          //Create an instance of class Employee using the row data
+          Employee employee = new Employee(rs.getInt("id"), rs.getString("email"), rs.getString("office"), rs.getDouble("salary"));
 
+          //Return the employee object
+          return employee;
         }
-        catch (SQLException e) { System.out.println(e.getMessage());}
+      } catch (SQLException e) { System.out.println(e.getMessage());}
+    } catch (SQLException e) { System.out.println(e.getMessage());}
 
-        //The employee was not in the table
-        return null;
-    }
+    //The employee was not in the table
+    return null;
+  }
 
 
-    public static void main(String[] args)  {
-        try {
-            Connection connection  = DriverManager.getConnection(DB_URL, USER, PASSWORD);
-            Employee employee;
+  public static void main(String[] args)  {
+    try (Connection connection = DriverManager.getConnection(DB_URL, USER, PASSWORD)) {
+      Employee employee;
 
-            //Get employee with id=100
-            employee = find(connection, 100);
-            System.out.println(employee);  //Employee{id=100, email='emp100@company.com', office='a456', salary=99000.0}
+      //Get employee with id=100
+      employee = find(connection, 100);
+      System.out.println(employee);  //Employee{id=100, email='emp100@company.com', office='a456', salary=99000.0}
 
-            //Get non-existent employee id=99
-            employee = find(connection, 99);
-            System.out.println(employee); //null
+      //Get non-existent employee id=99
+      employee = find(connection, 99);
+      System.out.println(employee); //null
 
-            connection.close();
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
+    } catch (SQLException e) { System.out.println(e.getMessage()); }
+  }
 }
 ```
 
@@ -212,8 +199,6 @@ null
 
 
 ## Saving an array of `Employee` objects
-
-
 
 The JDBC `PreparedStatement` interface is a special kind of  `Statement` that improves performance
 when an SQL statement needs to be executed multiple times:
@@ -243,30 +228,32 @@ public class PersistEmployeeArray {
   static final String USER = "postgres";
   static final String PASSWORD = "postgres";
 
-  public static void persist(Connection connection, Employee[] employees) throws SQLException {
+  public static void persist(Connection connection, Employee[] employees)  {
     //Create an insert statement with placeholder ? for each column value
     String insertStatement = "INSERT INTO employee (id, email, office, salary) VALUES (?,?,?,?)";
 
-    //Create a PreparedStatement object for sending parameterized SQL statements through the database connection.
-    PreparedStatement preparedStmt = connection.prepareStatement(insertStatement);
+    try (
+            //Create a PreparedStatement object for sending parameterized SQL statements through the database connection.
+            PreparedStatement preparedStmt = connection.prepareStatement(insertStatement)
+    ) {
+      //Loop through employee array to insert one row for each object
+      for (Employee e : employees) {
+        // Assign prepared statement placeholders ? to employee object's fields
+        preparedStmt.setInt(1, e.getId());   //first ?
+        preparedStmt.setString(2, e.getEmail());  //second ?
+        preparedStmt.setString(3, e.getOffice());  //third ?
+        preparedStmt.setDouble(4, e.getSalary()); //fourth ?
+        System.out.println(preparedStmt);
 
-    //Loop through employee array to insert one row for each object
-    for (Employee e : employees) {
-      // Assign prepared statement placeholders ? to employee object's fields
-      preparedStmt.setInt(1, e.getId());   //first ?
-      preparedStmt.setString(2, e.getEmail());  //second ?
-      preparedStmt.setString(3, e.getOffice());  //third ?
-      preparedStmt.setDouble(4, e.getSalary()); //fourth ?
-      System.out.println(preparedStmt);
+        //Execute the insert statement.
+        preparedStmt.executeUpdate();
+      }
+    } catch (SQLException e) { System.out.println(e.getMessage());  }
 
-      //Execute the insert statement.
-      preparedStmt.executeUpdate();
-    }
   }
 
   public static void main(String[] args)  {
-    try {
-      Connection connection = DriverManager.getConnection(DB_URL, USER, PASSWORD);
+    try (Connection connection = DriverManager.getConnection(DB_URL, USER, PASSWORD)) {
 
       //Create array of employees to save to the database
       Employee[] employees =  {
@@ -278,7 +265,6 @@ public class PersistEmployeeArray {
       //Save each employee in the array to the database
       persist(connection, employees);
 
-      connection.close();
     } catch (SQLException e) {
       System.out.println(e.getMessage());
     }
