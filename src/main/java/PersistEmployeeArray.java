@@ -1,5 +1,6 @@
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 public class PersistEmployeeArray {
@@ -13,7 +14,7 @@ public class PersistEmployeeArray {
         String insertStatement = "INSERT INTO employee (id, email, office, salary) VALUES (?,?,?,?)";
 
         //Create a PreparedStatement object for sending parameterized SQL statements through the database connection.
-        java.sql.PreparedStatement preparedStmt = connection.prepareStatement(insertStatement);
+        PreparedStatement preparedStmt = connection.prepareStatement(insertStatement);
 
         //Loop through employee array to insert one row for each object
         for (Employee e : employees) {
