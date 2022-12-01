@@ -13,7 +13,7 @@
 between a relational data model and an object-oriented data model.
 
 In a subsequent lesson we will work with the **Jakarta Persistence API (JPA)**,
-which is a standard specification that defines how an ORM should interact with a relational database.
+which is a standard specification that defines how an ORM should interact with a database.
 In this lesson we will cover a very simple implementation of persistence that will
 let us save an `Employee` class instance to a table, and subsequently create an `Employee`
 class instance by querying and retrieving a row of data from the table.
